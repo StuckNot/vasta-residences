@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Vasta Residences: a scroll-driven 3D walkthrough of Unit 3B.">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Vasta Residences</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Manrope:wght@400;500;600&display=swap">
+<style>
+/* Layout: fixed WebGL stage under a 600vh scroll track; copy pinned left, walkthrough rail right, specs section after. Single dark look by choice. */
+:root{
+  --ink:#141210;
+  --ink-2:#1e1a17;
+  --bone:#f3ede4;
+  --bone-dim:rgba(243,237,228,.68);
+  --brass:#b89563;
+  --brass-ink:#1a140d;
+  --line:rgba(243,237,228,.18);
+  --display:"Marcellus", "Cormorant Garamond", Georgia, serif;
+  --body:"Manrope", "Helvetica Neue", Arial, sans-serif;
+  color-scheme:dark;
+}
+html,body{background:var(--ink);color:var(--bone);font-family:var(--body)}
+body{overflow-x:hidden}
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+.scrim{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(90deg,rgba(20,18,16,.72) 0%,rgba(20,18,16,.35) 34%,rgba(20,18,16,0) 55%)}
+header{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding-top:calc(18px + env(safe-area-inset-top,0px));padding-bottom:18px;
+  padding-left:max(28px,env(safe-area-inset-left,0px));padding-right:max(28px,env(safe-area-inset-right,0px))}
+.brand{display:flex;flex-direction:column;line-height:1}
+.brand b{font-family:var(--display);font-weight:400;font-size:22px;letter-spacing:.18em}
+.brand span{font-size:9px;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-top:5px}
+nav{display:flex;gap:28px}
+nav a{color:var(--bone);text-decoration:none;font-size:11px;letter-spacing:.2em;text-transform:uppercase;opacity:.8}
+nav a:hover,nav a:focus-visible{opacity:1}
+.btn{display:inline-flex;align-items:center;gap:10px;background:var(--brass);color:var(--brass-ink);border:0;
+  font:600 11px/1 var(--body);letter-spacing:.18em;text-transform:uppercase;padding:13px 18px;text-decoration:none;cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+a:focus-visible,.btn:focus-visible{outline:1px solid var(--bone);outline-offset:3px}
+.hero{position:fixed;z-index:4;left:max(28px,env(safe-area-inset-left,0px));top:50%;transform:translateY(-50%);max-width:380px}
+.eyebrow{font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:var(--brass);margin:0 0 18px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(34px,4.4vw,58px);line-height:1.02;text-transform:uppercase;letter-spacing:.02em;margin:0 0 20px;text-wrap:balance}
+.lede{font-size:14px;line-height:1.65;color:var(--bone-dim);margin:0 0 22px;max-width:34ch}
+.more{display:inline-block;color:var(--bone);font-size:10px;letter-spacing:.24em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid var(--line);padding-bottom:4px;margin-bottom:26px}
+.rail{position:fixed;z-index:4;right:max(28px,env(safe-area-inset-right,0px));top:50%;transform:translateY(-50%);display:flex;gap:14px;align-items:stretch}
+.rail ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;justify-content:space-between;gap:34px;text-align:right}
+.rail li{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--bone-dim);transition:color .4s}
+.rail li.on{color:var(--bone)}
+.track{width:1px;background:var(--line);position:relative}
+.track i{position:absolute;left:-1px;top:0;width:3px;background:var(--brass);height:0}
+.caption{position:fixed;z-index:4;left:max(28px,env(safe-area-inset-left,0px));bottom:calc(26px + env(safe-area-inset-bottom,0px));
+  display:flex;gap:14px;align-items:baseline;font-size:12px;color:var(--bone-dim)}
+.caption b{font-family:var(--display);font-weight:400;color:var(--bone);font-size:15px;letter-spacing:.06em}
+.hint{position:fixed;z-index:4;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--bone-dim);transition:opacity .4s}
+.hint::after{content:"";display:block;width:1px;height:28px;background:var(--bone-dim);margin:10px auto 0;animation:drip 1.8s ease-in-out infinite}
+@keyframes drip{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+.story{height:600vh;position:relative;z-index:2}
+.specs{position:relative;z-index:6;background:var(--ink-2);padding-block:96px 80px;
+  padding-left:max(28px,env(safe-area-inset-left,0px));padding-right:max(28px,env(safe-area-inset-right,0px))}
+.specs-in{max-width:1080px;margin:0 auto;display:grid;gap:48px}
+.specs h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,3.4vw,42px);text-transform:uppercase;margin:0;max-width:18ch;text-wrap:balance}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line)}
+.grid div{padding:22px 20px 0 0;display:flex;flex-direction:column;gap:8px}
+.grid dt{font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--bone-dim)}
+.grid dd{margin:0;font-family:var(--display);font-size:30px;font-variant-numeric:tabular-nums}
+.grid dd small{font-family:var(--body);font-size:12px;color:var(--bone-dim);margin-left:4px}
+.foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:20px;align-items:center;color:var(--bone-dim);font-size:13px}
+.hide-ui .hero,.hide-ui .rail,.hide-ui .caption{opacity:0;pointer-events:none}
+.hero,.rail,.caption{transition:opacity .5s}
+@media (max-width:760px){
+  nav{display:none}
+  .scrim{background:linear-gradient(180deg,rgba(20,18,16,.8) 0%,rgba(20,18,16,.2) 45%,rgba(20,18,16,0) 70%,rgba(20,18,16,.6) 100%)}
+  .hero{top:calc(92px + env(safe-area-inset-top,0px));transform:none;right:max(16px,env(safe-area-inset-right,0px));left:max(16px,env(safe-area-inset-left,0px))}
+  header{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .lede{display:none}
+  .rail{display:none}
+  .caption{left:max(16px,env(safe-area-inset-left,0px))}
+  .hint{display:none}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:28px}
+  .specs{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+}
+</style>
+</head>
+<body>
+
+<canvas id="stage" aria-label="3D walkthrough of a residence"></canvas>
+<div class="scrim"></div>
+
+<header>
+  <div class="brand"><b>VASTA</b><span>Residences</span></div>
+  <nav aria-label="Main">
+    <a href="#residence">Residences</a><a href="#residence">Architecture</a><a href="#residence">Experience</a>
+  </nav>
+  <a class="btn" href="#residence">Book a visit</a>
+</header>
+
+<section class="hero" id="hero">
+  <p class="eyebrow">Tower B · Floor 14 · Unit 3B</p>
+  <h1>Space beyond expectation.</h1>
+  <p class="lede">A 3-bedroom home planned around one long walnut-doored gallery, opening into a double-aspect living room with a full-height arched window.</p>
+  <a class="more" href="#residence">Read more</a><br>
+  <a class="btn" href="#residence">Explore the residence <span aria-hidden="true">→</span></a>
+</section>
+
+<div class="rail" aria-hidden="true">
+  <ol id="stages"><li class="on">Plan</li><li>Gallery</li><li>Entry</li><li>Living</li></ol>
+  <div class="track"><i id="bar"></i></div>
+</div>
+<div class="caption" aria-live="polite"><b id="capT">Floor plan</b><span id="capS">2,140 sq ft · 3 bedrooms</span></div>
+<div class="hint" id="hint">Scroll to enter</div>
+
+<div class="story" id="story"></div>
+
+<section class="specs" id="residence">
+  <div class="specs-in">
+    <h2>Unit 3B, ready to walk through in person.</h2>
+    <dl class="grid">
+      <div><dt>Carpet area</dt><dd>2,140<small>sq ft</small></dd></div>
+      <div><dt>Ceiling height</dt><dd>3.0<small>m</small></dd></div>
+      <div><dt>Bedrooms</dt><dd>3<small>+ study</small></dd></div>
+      <div><dt>Possession</dt><dd>Q4<small>2027</small></dd></div>
+    </dl>
+    <div class="foot"><span>Sample sales gallery open daily, 10 am – 7 pm.</span><a class="btn" href="#hero">Book a visit <span aria-hidden="true">→</span></a></div>
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+const canvas=document.getElementById('stage');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=0.95;
+
+const scene=new THREE.Scene();
+const DARK=new THREE.Color('#141210'),WARM=new THREE.Color('#d6cab8');
+scene.background=DARK.clone();
+const camera=new THREE.PerspectiveCamera(30,1,0.05,200);
+
+// lights
+const hemi=new THREE.HemisphereLight('#fff5e8','#3a2e24',0.55);scene.add(hemi);
+const sun=new THREE.DirectionalLight('#fff1dc',1.5);sun.position.set(9,15,7);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-9,right:9,top:9,bottom:-9,near:1,far:40});sun.shadow.bias=-0.0006;scene.add(sun);
+
+const M=(c,r=0.85,extra={})=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:r,metalness:0},extra));
+const wallM=M('#ece4d7',0.92),walnut=M('#5a3823',0.55),floorM=M('#d9cdb9',0.75),stone=M('#efe9df',0.4),
+      boucle=M('#e6dfd3',1),wine=M('#6b2627',0.8),brass=M('#b89563',0.35,{metalness:0.8}),plinthM=M('#2b2622',0.9),
+      leaf=M('#3f4a33',0.9),rugM=M('#cbbfaa',1),linen=M('#f4f0e8',1);
+const H=3.0,T=0.12;
+function box(w,h,d,mat,x,y,z,cast=true){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.castShadow=cast;m.receiveShadow=true;scene.add(m);return m}
+function wall(x1,z1,x2,z2,h=H,y0=0){const dx=x2-x1,dz=z2-z1;const len=Math.hypot(dx,dz);
+  return box(dx?len+T:T,h,dz?len+T:T,wallM,(x1+x2)/2,y0+h/2,(z1+z2)/2)}
+
+// plinth + floor
+box(10.6,0.5,12.6,plinthM,0,-0.25,0,false);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(10,12),floorM);floor.rotation.x=-Math.PI/2;floor.position.y=0.002;floor.receiveShadow=true;scene.add(floor);
+
+// back wall with arched window (living room, z=-6)
+(function(){
+  const s=new THREE.Shape();s.moveTo(-5,0);s.lineTo(5,0);s.lineTo(5,H);s.lineTo(-5,H);s.lineTo(-5,0);
+  const a=new THREE.Path();a.moveTo(-1,0.35);a.lineTo(-1,1.75);a.absarc(0,1.75,1,Math.PI,0,true);a.lineTo(1,0.35);a.lineTo(-1,0.35);
+  s.holes.push(a);
+  const g=new THREE.ExtrudeGeometry(s,{depth:T,bevelEnabled:false});g.translate(0,0,-T/2);
+  const m=new THREE.Mesh(g,wallM);m.position.z=-6;m.castShadow=true;m.receiveShadow=true;scene.add(m);
+  const gs=new THREE.Shape();gs.moveTo(-1,0.35);gs.lineTo(1,0.35);gs.lineTo(1,1.75);gs.absarc(0,1.75,1,0,Math.PI,false);gs.lineTo(-1,0.35);
+  const glass=new THREE.Mesh(new THREE.ShapeGeometry(gs,32),new THREE.MeshBasicMaterial({color:'#fff7ea'}));glass.position.z=-6.04;scene.add(glass);
+  box(0.04,2.4,0.05,brass,0,1.55,-5.98,false);box(2,0.04,0.05,brass,0,1.75,-5.98,false);
+  const wl=new THREE.PointLight('#ffe9cc',1.3,9,2);wl.position.set(0,1.8,-5.2);scene.add(wl);
+})();
+// outer + partition walls
+wall(-5,-6,-5,6);wall(5,-6,5,6);
+box(4.5+T/2,H,T,wallM,-2.75,H/2,0);box(4.5+T/2,H,T,wallM,2.75,H/2,0);box(1.0,H-2.4,T,wallM,0,2.4+(H-2.4)/2,0);
+wall(-0.9,0,-0.9,6);wall(0.9,0,0.9,6);
+wall(0.9,3.6,5,3.6,H);  // bedroom / ensuite partition
+// corridor details: walnut skirting + linear ceiling light
+box(0.02,0.1,6,walnut,-0.83,0.05,3,false);box(0.02,0.1,6,walnut,0.83,0.05,3,false);
+for(let z=0.5;z<5.8;z+=0.62){box(0.03,2.6,0.5,walnut,0.82,1.4,z+0.25,false)}
+const strip=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.02,5.6),new THREE.MeshBasicMaterial({color:'#fff4e0'}));strip.position.set(0,H-0.02,3);scene.add(strip);
+[4.5,1.6].forEach(z=>{const l=new THREE.PointLight('#ffe3c0',0.7,5,2);l.position.set(0,2.6,z);scene.add(l)});
+
+// door (hinged at x=-0.5, swings into living room)
+const doorPivot=new THREE.Group();doorPivot.position.set(-0.5,0,0);scene.add(doorPivot);
+const door=new THREE.Mesh(new THREE.BoxGeometry(1.0,2.4,0.06),walnut);door.position.set(0.5,1.2,0);door.castShadow=true;doorPivot.add(door);
+const handle=new THREE.Mesh(new THREE.BoxGeometry(0.03,0.6,0.04),brass);handle.position.set(0.88,1.15,0.06);doorPivot.add(handle);
+box(1.08,0.04,0.14,walnut,0,2.42,0,false);
+
+// ceilings (fade in once the camera is inside)
+const ceilM=M('#efe8dc',0.95,{transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false});
+[[1.8,6,0,3],[10,6,0,-3]].forEach(([w,d,x,z])=>{const c=new THREE.Mesh(new THREE.PlaneGeometry(w,d),ceilM);c.rotation.x=Math.PI/2;c.position.set(x,H,z);scene.add(c)});
+
+// living room
+const rug=new THREE.Mesh(new THREE.CylinderGeometry(1.9,1.9,0.015,64),rugM);rug.position.set(1.4,0.01,-3.2);rug.receiveShadow=true;scene.add(rug);
+box(0.95,0.42,2.8,boucle,4.35,0.21,-3.2);box(0.28,0.85,2.8,boucle,4.75,0.5,-3.2);
+box(0.95,0.6,0.25,boucle,4.35,0.3,-4.7);box(0.95,0.6,0.25,boucle,4.35,0.3,-1.7);
+[-3.9,-3.2,-2.5].forEach(z=>box(0.18,0.4,0.5,linen,4.5,0.62,z));
+const table=new THREE.Mesh(new THREE.CylinderGeometry(0.62,0.66,0.36,48),walnut);table.position.set(2.2,0.18,-3.2);table.castShadow=true;table.receiveShadow=true;scene.add(table);
+// burgundy armchair
+const chair=new THREE.Group();chair.position.set(-1.7,0,-3.9);chair.rotation.y=0.9;scene.add(chair);
+[[0.95,0.38,0.9,0,0.25,0],[0.95,0.7,0.24,0,0.55,-0.36],[0.22,0.55,0.9,-0.45,0.4,0],[0.22,0.55,0.9,0.45,0.4,0]].forEach(([w,h,d,x,y,z])=>{
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wine);m.position.set(x,y,z);m.castShadow=true;chair.add(m)});
+// floor lamp + plant
+box(0.03,1.7,0.03,brass,-1.9,0.85,-5.3);
+const shade=new THREE.Mesh(new THREE.SphereGeometry(0.2,24,16),new THREE.MeshBasicMaterial({color:'#fff0d6'}));shade.position.set(-1.9,1.75,-5.3);scene.add(shade);
+const ll=new THREE.PointLight('#ffd9a8',0.8,5,2);ll.position.set(-1.9,1.7,-5.1);scene.add(ll);
+const pot=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.18,0.45,24),stone);pot.position.set(1.7,0.22,-5.5);pot.castShadow=true;scene.add(pot);
+const bush=new THREE.Mesh(new THREE.IcosahedronGeometry(0.45,1),leaf);bush.position.set(1.7,0.85,-5.5);bush.castShadow=true;scene.add(bush);
+box(1.6,0.5,0.45,walnut,-3.6,0.25,-5.7);
+// bedroom
+box(2.2,0.45,2.0,linen,3.6,0.22,1.7);box(0.1,1.1,2.3,walnut,4.88,0.55,1.7);
+box(0.4,0.15,0.7,boucle,4.5,0.52,1.25);box(0.4,0.15,0.7,boucle,4.5,0.52,2.15);
+box(1.3,0.06,2.0,M('#c9b79c',1),3.0,0.48,1.7,false);
+box(1.6,0.9,0.6,stone,3.8,0.45,5.6);
+// kitchen
+box(0.65,0.9,3.8,stone,-4.6,0.45,3.0);box(0.6,0.8,3.8,walnut,-4.62,2.2,3.0);
+box(1.0,0.9,2.2,walnut,-2.6,0.45,3.0);box(1.08,0.04,2.3,stone,-2.6,0.92,3.0);
+[2.3,3.0,3.7].forEach(z=>{const s=new THREE.Mesh(new THREE.CylinderGeometry(0.17,0.15,0.7,20),brass);s.position.set(-1.8,0.35,z);s.castShadow=true;scene.add(s)});
+
+// ---- camera path ----
+const K=[
+  {p:0,   pos:[15,14,17],  tgt:[0,0,0]},
+  {p:.22, pos:[6.5,7,12.5],tgt:[0,1,3]},
+  {p:.42, pos:[0,1.6,8.4], tgt:[0,1.5,0]},
+  {p:.62, pos:[0,1.6,2.1], tgt:[0,1.5,0]},
+  {p:.78, pos:[0,1.6,1.9], tgt:[0,1.5,0]},
+  {p:1,   pos:[0.15,1.55,-1.3],tgt:[1.5,1.15,-5]}
+];
+const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+const sm=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t)};
+const v=new THREE.Vector3(),tg=new THREE.Vector3(),A=new THREE.Vector3(),B=new THREE.Vector3();
+function sample(p){
+  let i=0;while(i<K.length-2&&p>K[i+1].p)i++;
+  const a=K[i],b=K[i+1],t=ease(Math.min(1,Math.max(0,(p-a.p)/(b.p-a.p))));
+  v.copy(A.fromArray(a.pos)).lerp(B.fromArray(b.pos),t);
+  tg.copy(A.fromArray(a.tgt)).lerp(B.fromArray(b.tgt),t);
+}
+
+// ---- UI ----
+const story=document.getElementById('story'),bar=document.getElementById('bar'),hint=document.getElementById('hint');
+const stagesEl=[...document.querySelectorAll('#stages li')],capT=document.getElementById('capT'),capS=document.getElementById('capS');
+const CAPS=[['Floor plan','2,140 sq ft · 3 bedrooms'],['The gallery','6.2 m walnut-lined hallway'],['Entry','2.4 m pivot door in solid walnut'],['Living room','4.8 m arched window, west light']];
+let target=0,cur=0,lastStage=-1;
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function readScroll(){const max=story.offsetHeight-innerHeight;target=Math.min(1,Math.max(0,scrollY/max))}
+addEventListener('scroll',readScroll,{passive:true});
+
+function resize(){
+  const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;
+  camera.fov=w/h<1?50:30;camera.updateProjectionMatrix();readScroll();
+}
+addEventListener('resize',resize);resize();
+
+const bgc=new THREE.Color();
+function frame(){
+  cur+=reduce?(target-cur):(target-cur)*0.08;
+  const p=cur;sample(p);
+  camera.position.copy(v);camera.lookAt(tg);
+  // shift the model right on wide screens while in the plan view
+  const w=innerWidth,h=innerHeight;const k=(w>760?0.2:0)*(1-sm(.2,.42,p));
+  if(k>0.001)camera.setViewOffset(w,h,-w*k,w/h<1?-h*0.08:0,w,h);else camera.clearViewOffset();
+  doorPivot.rotation.y=sm(.62,.8,p)*1.7;
+  ceilM.opacity=sm(.32,.42,p);
+  bgc.copy(DARK).lerp(WARM,sm(.25,.45,p));scene.background=bgc;
+  hemi.intensity=0.55+sm(.3,.5,p)*0.35;
+  bar.style.height=(p*100).toFixed(2)+'%';
+  hint.style.opacity=p>0.03?0:1;
+  const st=p<.3?0:p<.58?1:p<.8?2:3;
+  if(st!==lastStage){lastStage=st;stagesEl.forEach((li,i)=>li.classList.toggle('on',i===st));capT.textContent=CAPS[st][0];capS.textContent=CAPS[st][1]}
+  document.body.classList.toggle('hide-ui',scrollY>story.offsetHeight-innerHeight*0.6);
+  renderer.render(scene,camera);requestAnimationFrame(frame);
+}
+frame();
+})();
+</script>
+</body>
+</html>
